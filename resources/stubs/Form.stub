@@ -1,0 +1,51 @@
+@extends('adminlte::page')
+<!-- page title -->
+@section('title', 'Create and Update {{modelName}}s ' . Config::get('adminlte.title'))
+
+@section('content_header')
+    <h1>{{modelName}}s</h1>
+@stop
+
+@section('content')
+    {{--Show message if any--}}
+    @include('layouts.flash-message')
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Add or Update</h3>
+        </div>
+
+        {{ Form::open(array('url' => route($data->form_action), 'method' => 'POST','autocomplete' => 'off', 'files' => true)) }}
+        {{ Form::hidden('id', $data->id, array('id' => 'id')) }}
+
+        <div class="card-body">
+
+            {{modelColumn}}
+        </div>
+
+        <div class="card-footer">
+            <div id="form-button">
+                <div class="col-sm-12 text-center top20">
+                    <button type="submit" name="submit" id="btn-admin-member-submit"
+                            class="btn btn-primary">{{ $data->button_text }}</button>
+                </div>
+            </div>
+        </div>
+        {{ Form::close() }}
+    </div>
+
+    <!-- /.card -->
+    </div>
+    <!-- /.row -->
+    <!-- /.content -->
+@stop
+
+@section('css')
+    {{modelPathCss}}
+@stop
+
+@section('js')
+    <script>var typePage = "{{ $data->page_type }}";</script>
+    {{modelPathJs}}
+    <script src="{{ asset('js/backend/{{modelNamePlural}}/form.js'). '?v=' . rand(99999,999999) }}"></script>
+@stop

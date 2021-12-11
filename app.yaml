@@ -1,0 +1,12 @@
+runtime: php74
+
+handlers:
+  - url: /public/vendor
+    static_dir: vendor
+    
+env_variables:
+  ## Put production environment variables here.
+  APP_KEY: base64:QqOcawLFKazJtqszD7+7S3JDfoFZpb/RzbbtAI+rWh0=
+  APP_STORAGE: /tmp
+  VIEW_COMPILED_PATH: /tmp
+  SESSION_DRIVER: cookie

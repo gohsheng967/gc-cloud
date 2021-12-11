@@ -1,0 +1,114 @@
+<?php
+namespace App\Http\Controllers\Backend\{{modelName}};
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use Yajra\Datatables\Datatables;
+use App\Models\{{modelName}};
+use Auth;
+use Config;
+
+class {{modelName}}Controller extends Controller
+{
+
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
+    /**
+     * Show the application dashboard.
+     * More info DataTables : https://yajrabox.com/docs/laravel-datatables/master
+     *
+     * @param Datatables $datatables
+     * @return \Illuminate\Http\Response
+     * @throws \Exception
+     */
+    public function index(Datatables $datatables)
+    {
+        $columns = [
+            {{modelColumn}}
+            'created_at',
+            'updated_at',
+            'action' => ['orderable' => false, 'searchable' => false]
+        ];
+
+        if ($datatables->getRequest()->ajax()) {
+            return $datatables->of({{modelName}}::all())
+                ->addColumn('action', function ({{modelName}} $data){
+                    $routeEdit = route($this->getRoute() . ".edit", $data->id );
+                    $routeDelete = route($this->getRoute() . ".delete", $data->id);
+
+                    $button = '<div class="col-sm-12"><div class="row">';
+                    if (Auth::user()->hasRole('administrator')) { // Check the role
+                        $button .= '<div class="col-sm-6"><a href="'.$routeEdit.'"><button class="btn btn-primary"><i class="fa fa-edit"></i></button></a></div> ';
+                        $button .= '<div class="col-sm-6"><a href="'.$routeDelete.'" class="delete-button"><button class="btn btn-danger"><i class="fa fa-trash"></i></button></a></div>';
+                    } else {
+                        $button = '<a href="#"><button class="btn btn-primary disabled"><i class="fa fa-edit"></i></button></a> ';
+                        $button .= '<a href="#"><button class="btn btn-danger disabled"><i class="fa fa-trash"></i></button></a>';
+                    }
+                    $button .= '</div></div>';
+                    return $button;
+                })
+                ->rawColumns(['action'])
+                ->toJson();
+        }
+
+        $columnsArrExPr = [{{modelColumnArrNum}}];
+        $html = $datatables->getHtmlBuilder()
+            ->columns($columns)
+            ->parameters([
+                'order' => [[0,'desc']],
+                'responsive' => true,
+                'autoWidth' => false,
+                'lengthMenu' => [
+                    [ 10, 25, 50, -1 ],
+                    [ '10 rows', '25 rows', '50 rows', 'Show all' ]
+                ],
+                'dom' => 'Bfrtip',
+                'buttons' => $this->buttonDatatables($columnsArrExPr),
+            ]);
+
+        return view('backend.{{modelNamePlural}}.index', compact('html'));
+    }
+
+    /**
+     * Fungtion show button for export or print.
+     *
+     * @param $columnsArrExPr
+     * @return array[]
+     */
+    public function buttonDatatables($columnsArrExPr){
+        return [
+            [
+                'extend' => 'csvHtml5',
+                'exportOptions' => [
+                    'columns' => $columnsArrExPr
+                ]
+            ],
+            [
+                'extend' => 'pdfHtml5',
+                'exportOptions' => [
+                    'columns' => $columnsArrExPr
+                ]
+            ],
+            [
+                'extend' => 'excelHtml5',
+                'exportOptions' => [
+                    'columns' => $columnsArrExPr
+                ]
+            ],
+            [
+                'extend' => 'print',
+                'exportOptions' => [
+                    'columns' => $columnsArrExPr
+                ]
+            ],
+        ];
+    }
+}
