@@ -23,7 +23,7 @@ return [
     |
     */
 
-    'title' => 'Track with Qr',
+    'title' => 'Protag App',
     'title_prefix' => '',
     'title_postfix' => '',
 
@@ -54,7 +54,7 @@ return [
     |
     */
 
-    'logo' => '<b>Track</b>QR',
+    'logo' => 'Welcome to <b>Protag</b>',
     'logo_img' => 'logo/logo.png',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
@@ -336,7 +336,7 @@ return [
                     'icon' => 'fa fa-upload',
                 ],
                 [
-                    'text' => 'Add or Update',
+                    'text' => 'Add',
                     'url'  => 'users/add',
                     'icon' => 'fa fa-edit',
                 ],

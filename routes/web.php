@@ -82,11 +82,12 @@ Route::group(['middleware' => ['role:administrator|admin']], function () {
     Route::GET('/analytic', 'Backend\Analytic\AnalyticController@index')->name('analytic');
 
     Route::GET('/product/add', 'Backend\Product\ProductController@add')->name('product.add');
-    Route::POST('/product/create', 'Backend\Product\ProductController@create')->name('product.create');
+    Route::POST('/product/create', 'Backend\Product\ProductController@addUpdate')->name('product.create');
     Route::GET('/product', 'Backend\Product\ProductController@index')->name('product');
     Route::GET('/product/edit/{id}', 'Backend\Product\ProductController@edit')->name('product.edit');
     Route::GET('/product/delete/{id}', 'Backend\Product\ProductController@delete')->name('product.delete');
     Route::POST('/product/update', 'Backend\Product\ProductController@update')->name('product.update');
+    Route::GET('/product/getProduct/{sku_id}', 'Backend\Product\ProductController@getProduct')->name('product.get');
 
     Route::GET('/product/import', 'Backend\Product\ProductController@import')->name('product.import');
     Route::POST('/product/importData', 'Backend\Product\ProductController@importData')->name('product.importData');
@@ -96,7 +97,8 @@ Route::group(['middleware' => ['role:administrator|admin']], function () {
     Route::GET('/sku/delete/{id}', 'Backend\Sku\SkuController@delete')->name('sku.delete');
     Route::POST('/sku/update', 'Backend\Sku\SkuController@update')->name('sku.update');
     Route::GET('/sku/add', 'Backend\Sku\SkuController@add')->name('sku.add');
-    Route::POST('/sku/create', 'Backend\Sku\SkuController@create')->name('sku.create');
+    Route::POST('/sku/create', 'Backend\Sku\SkuController@addUpdate')->name('sku.create');
+    Route::GET('/sku/getSku/{id}', 'Backend\Sku\SkuController@getSku')->name('sku.getSku');
 
     Route::GET('/sku/import', 'Backend\Sku\SkuController@import')->name('sku.import');
     Route::POST('/sku/importData', 'Backend\Sku\SkuController@importData')->name('sku.importData');
@@ -108,6 +110,10 @@ Route::group(['middleware' => ['role:administrator|admin']], function () {
     Route::GET('/batch/add/{sku_id}', 'Backend\Batch\BatchController@add')->name('batch.add');
     Route::POST('/batch/create', 'Backend\Batch\BatchController@create')->name('batch.create');
     Route::GET('/batch/getBatch/{sku_id}', 'Backend\Batch\BatchController@getBatch')->name('batch.get');
+
+    Route::GET('/export/product', 'Backend\Product\ProductController@exportPage')->name('product.exportPage');
+    Route::GET('/export/excel', 'Backend\Product\ProductController@exportProductQRExcel')->name('exportProductQRExcel');
+    Route::GET('/export/pdf', 'Backend\Product\ProductController@exportProductQRPDF')->name('exportProductQRPDF');
 
 
 });

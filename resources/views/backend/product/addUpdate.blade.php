@@ -13,6 +13,9 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Add or Update</h3>
+            <div class="spinner-border float-right" role="status" id ='spinner'>
+                <span class="sr-only ">Loading...</span>
+            </div>
         </div>
 
         {{ Form::open(array('url' => route($data->form_action), 'method' => 'POST','autocomplete' => 'off', 'files' => true)) }}
@@ -54,17 +57,24 @@
                 <div class="col-sm-2 col-form-label">
                     <strong class="field-title">Serial No</strong>
                 </div>
-                <div class="col-sm-3 col-content">
-                    {{ Form::text('serial_no', $data->serial_no, array('class' => 'form-control', 'required')) }}
+                <div class="col-sm-6 col-content">
+                    <select name="serial_id" id="serial_id" class = "form-control">
+                        <option value="" selected disabled>-- Select Serial No --</option>
+                    </select>
+                    {{ Form::text('serial_no', $data->serial_no, array('class' => 'form-control mt-1', 'id' =>'serial_no' )) }}
+
                 </div>
+                <!-- <div class="col-sm-3 col-content">
+                    {{ Form::text('serial_no', $data->serial_no, array('class' => 'form-control', 'required')) }}
+                </div> -->
             </div>
         </div>
 
         <div class="card-footer">
             <div id="form-button">
                 <div class="col-sm-12 text-center top20">
-                    <button type="submit" name="submit" id="btn-admin-member-submit" class="btn btn-primary">{{ $data->button_text }}</button>
-                    <a href="{{route('product')}}" class ="btn btn-warning">Back to Product List</a>
+                    <button type="submit" name="submit" id="btn-admin-member-submit"
+                            class="btn btn-primary">{{ $data->button_text }}</button>
                 </div>
             </div>
         </div>
@@ -86,7 +96,12 @@
 
     <script src="{{ asset('js/backend/histories/form.js'). '?v=' . rand(99999,999999) }}"></script>
     <script>
+    $( document ).ready(function() {
+        $('#spinner').hide();
+    });
+
     $("#sku_id").on('change', function() {
+        $('#spinner').show();
         const $batch_id = $('#batch_id');
         const selSKU = $(this).find(':selected').val();
         var old_batch_id = $('#old_batch_id').val();
@@ -109,9 +124,53 @@
                             }
                         });
                     }
+                    $('#spinner').hide();
                 }
             })
         }
-    }).trigger('change')
+    }).trigger('change');
+
+
+    $("#batch_id").on('change', function() {
+        $('#spinner').show();
+        const $serial_id = $('#serial_id');
+        const selBatch = $(this).find(':selected').val();
+        if (selBatch) {
+            $.ajax({
+                type: 'GET',
+                url: '/product/getProduct/'+selBatch,
+                dataType: 'json',
+                success: function (response) {
+                    if (response) {
+                        let opt = '';
+                        $serial_id.html('<option value="">-- Add New --</option>');
+                        $.each(response,function(key,value){
+                            let hasSelected = '{{ request()->get('serial_id') }}'
+                            
+                            if (hasSelected === value.id) {
+                                $serial_id.append('<option selected value="'+value.id+'">'+value.serial_no +'</option>');
+                            } else {
+                                $serial_id.append('<option  value="'+value.id+'">'+value.serial_no +'</option>');
+                            }
+                        });
+                    }
+                    $('#spinner').hide();
+
+                }
+            })
+        }
+    }).trigger('change');
+
+    $("#serial_id").on('change', function() {
+        const $serial_no = $('#serial_no');
+        const selSerial_text = $(this).find(':selected').text();
+        const selSerial_id = $(this).find(':selected').val();
+
+        if (selSerial_id !== "" ) {
+            $serial_no.val(selSerial_text);
+        }else{
+            $serial_no.val('');
+        };
+    }).trigger('change');
     </script>
 @stop

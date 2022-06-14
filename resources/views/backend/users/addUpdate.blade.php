@@ -12,7 +12,7 @@
 
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Add</h3>
+            <h3 class="card-title">Add or Update</h3>
         </div>
 
         {{ Form::open(array('url' => route($data->form_action), 'method' => 'POST','autocomplete' => 'off', 'files' => true)) }}

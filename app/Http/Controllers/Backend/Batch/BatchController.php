@@ -121,7 +121,7 @@ class BatchController extends Controller
         $data->form_action = $this->getRoute() . '.update';
         // Add page type here to indicate that the form.blade.php is in 'edit' mode
         $data->page_type = 'edit';
-        $data->button_text = 'Edit';
+        $data->button_text = 'Save';
 
         $sku_code = Sku::find($data->sku_id);
         $data->sku_code =$sku_code->sku_code;

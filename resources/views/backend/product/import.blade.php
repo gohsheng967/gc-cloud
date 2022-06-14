@@ -26,7 +26,7 @@
                 </div>
                 <div class="col-sm-10 col-content">
                     <input type="file" class="custom-file-input" name="import" id="import" required>
-                    <label class="custom-file-label" for="customFile">Choose file</label>
+                    <label class="custom-file-label" for="customFile" id ='importLabel'>Choose file</label>
                     <span class="image-upload-label"><i class="fa fa-question-circle" aria-hidden="true"></i> Please upload the csv File</span>
                 </div>
             </div>
@@ -72,4 +72,10 @@
     <script>var typePage = "{{ $data->page_type }}";</script>
 
     <script src="{{ asset('js/backend/histories/form.js'). '?v=' . rand(99999,999999) }}"></script>
+    <script>
+        $('#import').change(function() {
+            var file = $('#import')[0].files[0].name;
+            $('#importLabel').text(file);
+        });
+    </script>
 @stop

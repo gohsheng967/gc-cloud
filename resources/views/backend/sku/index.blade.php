@@ -18,8 +18,8 @@
         </div>
 
         <div class="card-body">
-            <div class="table-responsive">
-                {!! $html->table(['class' => 'table table-hover']) !!}
+            <div class="table-responsive ">
+                {!! $html->table(['class' => 'table table-hover wrap']) !!}
             </div>
         </div>
     </div>

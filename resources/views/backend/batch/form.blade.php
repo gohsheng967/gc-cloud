@@ -12,7 +12,8 @@
 
     <div class="card">
         <div class="card-header">
-            <h3 class="card-title">Add or Update</h3>
+            <h3 class="card-title">{{ $data->button_text }} Batch</h3>
+            <a href="{{ url()->previous() }}" class ="btn btn-sm btn-warning float-right">Back to Last Page</a>
         </div>
 
         {{ Form::open(array('url' => route($data->form_action), 'method' => 'POST','autocomplete' => 'off')) }}

@@ -10,6 +10,7 @@ use App\Models\Sku;
 use Auth;
 use Config;
 use Crypt;
+use Log;
 
 class SkuController extends Controller
 {
@@ -20,6 +21,7 @@ class SkuController extends Controller
                 return 'function(data,type,fullData,meta){return meta.settings._iDisplayStart+meta.row+1;}';
             }],
             'sku_code',
+            'halal_cert_no',
             'sku_category',
             'manufacturer',
             // 'created_at',
@@ -64,6 +66,8 @@ class SkuController extends Controller
                 ],
                 'dom' => 'Bfrtip',
                 'buttons' => $this->buttonDatatables($columnsArrExPr),
+                'columnDefs' => [['width' => 300, 'targets' => 4]],
+                'fixedColumns' => true
             ]);
 
         return view('backend.sku.index', compact('html'));
@@ -113,7 +117,7 @@ class SkuController extends Controller
         $data->form_action = $this->getRoute() . '.update';
         // Add page type here to indicate that the form.blade.php is in 'edit' mode
         $data->page_type = 'edit';
-        $data->button_text = 'Edit';
+        $data->button_text = 'Save';
 
         return view('backend.sku.form', [
             'data' => $data,
@@ -142,12 +146,20 @@ class SkuController extends Controller
     }
     public function update(Request $request)
     {
+        $halal_cert_pattern = "/^JAKIM-[0-9A-Z] [0-9A-Z]{3}-[0-9A-Z]{2}\/[0-9A-Z]{4}/";
+        if(!empty($request->halal_cert_no)){
+            if(preg_match($halal_cert_pattern, $request->halal_cert_no) !== 1){
+                return redirect()->back()->with('error', $request->halal_cert_no.' Halal Certificate No format is not valid.');
+            }
+        }
+
         $new = $request->all();
         try {
             $currentData = Sku::find($request->get('id'));
             if ($currentData) {
                 $currentData -> sku_code = $request->sku_code;
                 $currentData -> sku_category = ucwords(strtolower($request->sku_category));
+                $currentData -> halal_cert_no = $request->halal_cert_no;
                 $currentData -> source_from = $request->source_from;
                 $currentData -> manufacturer = $request->manufacturer;
                 $currentData -> temperature = $request->temperature;
@@ -196,54 +208,104 @@ class SkuController extends Controller
         $data->form_action = $this->getRoute() . '.create';
         // Add page type here to indicate that the form.blade.php is in 'add' mode
         $data->page_type = 'add';
-        $data->button_text = 'Add';
+        $data->button_text = 'Save';
+        $data->extSku = Sku::select('id','sku_code')->get();
 
-        return view('backend.sku.form', [
+        return view('backend.sku.addUpdate', [
             'data' => $data,
         ]);
     }
 
-    public function create(Request $request){
-        $new = $request->all();
-        try {
-            if($new){
-                $newSku = new Sku;
-                $newSku->sku_code = $request->sku_code;
-                $newSku->sku_category = ucwords(strtolower($request->sku_category));
-                $newSku->source_from = $request->source_from;
-                $newSku->manufacturer = $request->manufacturer;
-                $newSku->temperature = $request->temperature;
-                $newSku->save();
+    public function addUpdate(Request $request){
 
-                if($newSku){
+        $halal_cert_pattern = "/^JAKIM-[0-9A-Z] [0-9A-Z]{3}-[0-9A-Z]{2}\/[0-9A-Z]{4}/";
+        if(!empty($request->halal_cert_no)){
+            if(preg_match($halal_cert_pattern, $request->halal_cert_no) !== 1){
+                return redirect()->back()->with('error', $request->halal_cert_no.' Halal Certificate No format is not valid.');
+            }
+        }
+
+        $new = $request->all();
+        if($request->sku_id == "add"){
+            try {
+                if(!empty($request->sku_code)){
+                    $newSku = new Sku;
+                    $newSku->sku_code = $request->sku_code;
+                    $newSku->sku_category = ucwords(strtolower($request->sku_category));
+                    $newSku->source_from = $request->source_from;
+                    $newSku->halal_cert_no = $request->halal_cert_no;
+                    $newSku->manufacturer = $request->manufacturer;
+                    $newSku->temperature = $request->temperature;
+                    $newSku->save();
+    
+                    if($newSku){
+                        if ($request->hasFile('image')) {
+                            $file = $request->file('image');
+                            // image file name example: [news_id]_image.jpg
+                            ${'image'} = $newSku->id . "_sku." . $file->getClientOriginalExtension();
+        
+                            // save image to the path
+                            $file->move(Config::get('const.UPLOAD_PATH'), ${'image'});
+                            $newSku->{'image'} = ${'image'};
+                        } else {
+                            $newSku->{'image'} = 'no_image_default.png';
+                        }
+                    }
+                    $newSku->save();
+    
+    
+                    // Save log
+                    $controller = new SaveActivityLogController();
+                    $controller->saveLog($new, "Created new SKU");
+    
+                    // Create is successful, back to list
+                    return back()->with('success', Config::get('const.SUCCESS_CREATE_MESSAGE'));
+                }
+                // Create is failed
+                return back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+            } catch (Exception $e) {
+                // Create is failed
+                return redirect()->route($this->getRoute())->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+            }
+        }else{
+            try {
+                $currentData = Sku::find($request->sku_id);
+                if ($currentData) {
+                    $currentData -> sku_code = $request->sku_code;
+                    $currentData -> sku_category = ucwords(strtolower($request->sku_category));
+                    $currentData -> halal_cert_no = $request->halal_cert_no;
+                    $currentData -> source_from = $request->source_from;
+                    $currentData -> manufacturer = $request->manufacturer;
+                    $currentData -> temperature = $request->temperature;
+    
+                    // upload image
                     if ($request->hasFile('image')) {
                         $file = $request->file('image');
-                        // image file name example: [news_id]_image.jpg
-                        ${'image'} = $newSku->id . "_sku." . $file->getClientOriginalExtension();
-    
+                        // image file name example: [id]_image.jpg
+                        ${'image'} = $currentData->id . "_sku." . $file->getClientOriginalExtension();
                         // save image to the path
                         $file->move(Config::get('const.UPLOAD_PATH'), ${'image'});
-                        $newSku->{'image'} = ${'image'};
-                    } else {
-                        $newSku->{'image'} = 'no_image_default.png';
-                    }
+                        $currentData -> image =  ${'image'};
+                    } 
+    
+                    $currentData -> save();
+    
+                    // Save log
+                    $controller = new SaveActivityLogController();
+                    $controller->saveLog($new, "Update SKU Details");
+    
+                    return redirect()->route($this->getRoute())->with('success', Config::get('const.SUCCESS_UPDATE_MESSAGE'));
                 }
-                $newSku->save();
-
-
-                // Save log
-                $controller = new SaveActivityLogController();
-                $controller->saveLog($new, "Created new SKU");
-
-                // Create is successful, back to list
-                return back()->with('success', Config::get('const.SUCCESS_CREATE_MESSAGE'));
+    
+                // If update is failed
+                return back()->with('error', Config::get('const.FAILED_UPDATE_MESSAGE'));
+            } catch (Exception $e) {
+                // If update is failed
+                return back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
             }
-            // Create is failed
-            return redirect()->route($this->getRoute())->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
-        } catch (Exception $e) {
-            // Create is failed
-            return redirect()->route($this->getRoute())->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+
         }
+
 
     }
 
@@ -278,7 +340,7 @@ class SkuController extends Controller
                 $countheader = count($header);
 
                 // Check is csv file is correct format
-                if ($countheader == 5 && in_array('sku_code', $header, true)) {
+                if ($countheader == 6 && in_array('sku_code', $header, true)) {
                     // Loop the row data csv
                     while (($csvData = fgetcsv($fp)) !== false) {
 
@@ -288,7 +350,7 @@ class SkuController extends Controller
                         $dataLen = count($csvData);
 
                         // Skip row if length != 1
-                        if (!($dataLen == 5)) {
+                        if (!($dataLen == 6)) {
                             continue;
                         }
 
@@ -296,14 +358,25 @@ class SkuController extends Controller
                         $sku_code = trim($csvData[0]);
                         $sku_category = trim($csvData[1]);
                         $source_from = trim($csvData[2]);
-                        $manufacturer = trim($csvData[3]);
-                        $temperature = trim($csvData[4]);
+                        $halal_code = trim($csvData[3]);
+                        $manufacturer = trim($csvData[4]);
+                        $temperature = trim($csvData[5]);
+
+                        $halal_cert_pattern = "/^JAKIM-[0-9A-Z] [0-9A-Z]{3}-[0-9A-Z]{2}\/[0-9A-Z]{4}/";
+                        if(!empty($halal_code)){
+                            if(preg_match($halal_cert_pattern, $halal_code) !== 1){
+                                return redirect()->back()->with('error', $sku_code.' -> Import failed! Halal Certificate No format is not valid.');
+                            }else if(strlen($halal_code) > 19 || strlen($halal_code) < 19){
+                                return redirect()->back()->with('error', $sku_code.' -> Import failed! Halal Certificate No format is not valid.');
+                            }
+                        }
 
                         // Insert data to QR code
                         $dataName = array(
                             'sku_code' => $sku_code,
                             'sku_category' => $sku_category,
                             'source_from' => $source_from,
+                            'halal_cert_no' => $halal_code,
                             'manufacturer' => $manufacturer,
                             'temperature' => $temperature,
                         );
@@ -319,6 +392,11 @@ class SkuController extends Controller
         }
 
         return redirect()->route($this->getRoute())->with('error', 'Please select CSV file.');
+    }
+
+    public function getSku(Request $request, $id){
+        $Skudetail = Sku::where('id',$id)->get();
+            return response()->json($Skudetail);        
     }
 }
 

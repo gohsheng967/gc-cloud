@@ -19,6 +19,9 @@
         {{ Form::hidden('id', $data->id, array('id' => 'user_id')) }}
 
         <div class="card-body">
+            <div class="class">
+                
+            </div>
             <div class="form-group row">
                 <div class="col-sm-2 col-form-label">
                     <strong class="field-title">Name</strong>
@@ -64,8 +67,8 @@
                 <div class="col-sm-10 col-content">
                     <input class="custom-file-input" name="image" type="file"
                            accept="image/gif, image/jpeg,image/jpg,image/png" data-max-width="800"
-                           data-max-height="400">
-                    <label class="custom-file-label" for="customFile">Choose file</label>
+                           data-max-height="400" id ="inputFile">
+                    <label class="custom-file-label" for="customFile" id ="fileUpload">Choose file</label>
                     <span
                         class="image-upload-label"><i class="fa fa-question-circle" aria-hidden="true"></i> Please upload the image (Recommended size: 160px × 160px, max 5MB)</span>
                     <div class="image-preview-area">
@@ -105,4 +108,10 @@
 
 @section('js')
     <script src="{{ asset('js/backend/profile/form.js') }}"></script>
+    <script>
+        $('#inputFile').change(function() {
+            var file = $('#inputFile')[0].files[0].name;
+            $('#fileUpload').text(file);
+        });
+    </script>
 @stop

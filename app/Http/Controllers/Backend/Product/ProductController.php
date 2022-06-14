@@ -5,15 +5,26 @@ namespace App\Http\Controllers\backend\Product;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Product;
+use App\Models\ProductReport;
 use App\Models\Sku;
 use App\Models\User;
 use App\Models\History;
+use App\Models\Batch;
 use App\Http\Controllers\Utils\Activity\SaveActivityLogController;
 use Config;
 use Crypt;
 use Auth;
 use Log;
 use Yajra\Datatables\Datatables;
+use Storage;
+use App\Exports\ProductQRCodeExcelExport;
+use Excel;
+use Validator;
+use PDF;
+
+
+
+
 
 class ProductController extends Controller
 {
@@ -50,8 +61,11 @@ class ProductController extends Controller
                     return $button;
                 })
                 ->addColumn('download_qr_code', function (Product $data) {
-                    $routeDownloadQr = "https://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=".Crypt::encryptString($data->id)."&choe=UTF-8";
-                    return '<a href="'.$routeDownloadQr.'" target="_blank"><button class="btn btn-outline-primary">Download</button></a>';
+                    // $routeDownloadQr = "https://chart.googleapis.com/chart?chs=400x400&cht=qr&chl=".Crypt::encryptString($data->id)."&choe=UTF-8";
+                    // return '<a href="'.$routeDownloadQr.'" target="_blank"><button class="btn btn-outline-primary">Download</button></a>';
+                    return '<a href="'.$data->qrCode_img.'" target="_blank"><button class="btn btn-outline-primary">Download</button></a>';
+
+                    // return "<img src='".$data->qrCode_img."' alt='' width ='200px'/>";
                 })
                 ->rawColumns(['action', 'download_qr_code'])
                 ->toJson();
@@ -81,37 +95,84 @@ class ProductController extends Controller
         $data->form_action = $this->getRoute() . '.create';
         // Add page type here to indicate that the form.blade.php is in 'add' mode
         $data->page_type = 'add';
-        $data->button_text = 'Add';
+        $data->button_text = 'Save';
         $skuList = SKU::all();
 
-        return view('backend.product.form', [
+        return view('backend.product.addUpdate', [
             'data' => $data, 'skuList'=>$skuList
         ]);
     }
 
-    public function create(Request $request){
+    public function addUpdate(Request $request){
         $new = $request->all();
-        try {
-            if($new){
-                $newProduct = new Product;
-                $newProduct->sku_id = $request->sku_id;
-                $newProduct->batch_id = $request->batch_id;
-                $newProduct->serial_no = $request->serial_no;
-                $newProduct->save();
 
-                // Save log
-                $controller = new SaveActivityLogController();
-                $controller->saveLog($new, "Created new Product QR");
 
-                // Create is successful, back to list
-                return redirect()->route('product')->with('success', Config::get('const.SUCCESS_CREATE_MESSAGE'));
-            }
-            // Create is failed
-            return redirect()->route($this->getRoute())->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
-        } catch (Exception $e) {
-            // Create is failed
-            return redirect()->route($this->getRoute())->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+
+        if($request->sku_id == ""){
+            return  back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
         }
+
+        if($request->batch_id == ""){
+            return  back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+        }
+
+
+        if(empty($request->serial_id)){
+            $this->validate($request, [
+                'serial_no' => 'required|unique:product',
+            ],[],[
+            ]);
+
+            try {
+                if($new){
+                    $newProduct = new Product;
+                    $newProduct->sku_id = $request->sku_id;
+                    $newProduct->batch_id = $request->batch_id;
+                    $newProduct->serial_no = $request->serial_no;
+                    $newProduct->save();
+
+                    $newProduct->refresh();
+                    // dd(storage_path());
+                    $path = "QRCode_".$newProduct->serial_no.".png";
+
+                    // log::debug(Crypt::encryptString($newProduct->id));
+
+                    \QrCode::size(400)->format('png')->encoding('UTF-8')->generate($newProduct->id, storage_path()."\app\public\QrCode\/". $path);
+
+                    $newProduct -> qrCode_img = "storage/QrCode/".$path;
+                    $newProduct->save();
+
+
+                    // // Save log
+                    $controller = new SaveActivityLogController();
+                    $controller->saveLog($new, "Created new Product QR");
+                    
+    
+                    // Create is successful, back to list
+                    return redirect()->route('product')->with('success', Config::get('const.SUCCESS_CREATE_MESSAGE'));
+                }
+                // Create is failed
+                return back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+            } catch (Exception $e) {
+                // Create is failed
+                return  back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+            }
+        }else{
+            $record = Product::where('sku_id', $request->sku_id)
+                             ->where('batch_id', $request->batch_id)
+                             ->where('id', $request->serial_id)
+                            ->first();
+            if(empty($record)){
+                return  back()->with('error', 'Product Not Found');
+            }
+
+            $record->serial_no = $request->serial_no;
+            $record ->save();
+
+            return redirect()->route('product')->with('success', Config::get('const.SUCCESS_CREATE_MESSAGE'));
+
+        }
+
 
     }
 
@@ -160,6 +221,11 @@ class ProductController extends Controller
             $new = Product::find($id);
             $new->delete();
 
+            $record = ProductReport::where('scan_product_id', $id)->get();
+            foreach($record as $row){
+                $row->delete();
+            }
+
             // Save log
             $controller = new SaveActivityLogController();
             $controller->saveLog($new->toArray(), "Delete history");
@@ -180,7 +246,7 @@ class ProductController extends Controller
         $data->form_action = $this->getRoute() . '.update';
         // Add page type here to indicate that the form.blade.php is in 'edit' mode
         $data->page_type = 'edit';
-        $data->button_text = 'Edit';
+        $data->button_text = 'Save';
         $skuList = SKU::all();
 
         return view('backend.product.form', [
@@ -261,8 +327,8 @@ class ProductController extends Controller
                         // Row column length
                         $dataLen = count($csvData);
 
-                        // Skip row if length != 1
-                        if (!($dataLen == 4)) {
+                        // Skip row if length != 3
+                        if (!($dataLen == 3)) {
                             continue;
                         }
 
@@ -272,18 +338,26 @@ class ProductController extends Controller
                         $serial_no = trim($csvData[2]);
 
                         $sku_id = Sku::select('id')->where('sku_code', $sku_code)->first();
-                        $batch_id = Sku::select('id')->where('batch_no', $batch_no)->first();
+                        $batch_id = Batch::select('id')->where('batch_no', $batch_no)->where('sku_id', $sku_id->id)->first();
                         if(empty($sku_id) || empty($batch_id)){
                             return redirect()->route($this->getRoute())->with('error', 'Import failed! Invalid Data.');
                         }
                         // Insert data to QR code
                         $dataName = array(
-                            'sku_id' => $sku_code,
-                            'batch_id' => $batch_no,
+                            'sku_id' => $sku_id->id,
+                            'batch_id' => $batch_id->id,
                             'serial_no' => $serial_no,
                         );
 
-                        Product::create($dataName);
+                        $product = Product::create($dataName);
+
+                        $path = "QRCode_".$product->serial_no.".png";
+
+                        \QrCode::size(400)->format('png')->encoding('UTF-8')->generate($product->id, storage_path()."\app\public\QrCode\/". $path);
+
+                        $product -> qrCode_img = "storage/QrCode/".$path;
+                        $product->save();
+
                     }
 
                     return redirect()->route($this->getRoute())->with('success', 'Imported was success!');
@@ -296,4 +370,89 @@ class ProductController extends Controller
         return redirect()->route($this->getRoute())->with('error', 'Please select CSV file.');
     }
 
+    public function getProduct(Request $request, $id){
+        $product = Product::where('batch_id',$id)->get();
+            return response()->json($product);        
+    }
+
+    public function exportPage(Request $request){     
+        
+        $skus = SKU::all();
+
+        $filter = $request->filter_sku;
+
+        $data = Product::when($filter, function ($query) use ($filter) {
+            return $query->where('sku_id', $filter);
+        })->get();
+        
+
+        return view('backend.product.export', compact('skus', 'data'));
+    }
+
+    public function exportProductQRExcel(Request $request){
+
+
+        // $arrayProductID = $request->arrayExport;
+
+        $arrayProductID = explode(",", $request->arrayExport);
+
+
+        if(!empty($arrayProductID)){
+            $product = Product::whereIn('id', $arrayProductID)->get();
+
+            return Excel::download(new ProductQRCodeExcelExport($product), 'ProductQrCode'.'.xlsx');
+
+        }
+
+    }
+
+    public function exportProductQRPDF(Request $request){
+
+
+        // $arrayProductID = $request->arrayExport;
+
+        $arrayProductID = explode(",", $request->arrayExport);
+
+
+        if(!empty($arrayProductID)){
+            $product = Product::whereIn('id', $arrayProductID)->get();
+
+            $products = [];
+            $count = 1 ;
+            $html = '';
+
+            foreach( $product  as $item){
+                // $nestedData['serial_no'] = $item->serial_no; 
+                // $nestedData['qrCode_img'] = $item->qrCode_img; 
+
+
+                // $nestedData['nextLine'] = $item->qrCode_img; 
+
+                // $products[] = $nestedData;
+            if($count < 4){
+                if($count == 1){
+                    $html = $html."<tr><td><div style='width:300px;padding:10px'><img src= '".$item->qrCode_img."' alt='' width='300px'/><br><p style ='text-align:center'>".$item->serial_no."</p></div></td>";
+                    $count = $count + 1;
+                }else if($count == 3){
+                    $html = $html."<td><div style='width:300px;padding:10px'><img src= '".$item->qrCode_img."' alt='' width='300px'/><br><p style ='text-align:center'>".$item->serial_no."</p></div></td></tr>";
+                    $count = $count + 1;
+                }
+                else{
+                    $html = $html."<td><div style='width:300px;padding:10px'><img src= '".$item->qrCode_img."' alt='' width='300px'/><br><p style ='text-align:center'>".$item->serial_no."</p></div></td>";
+                    $count = $count + 1;
+                }
+
+            }else{
+                $html = $html."<tr><div style='width:300px;padding:10px'><img src= '".$item->qrCode_img."' alt='' width='300px'/><br><p style ='text-align:center'>".$item->serial_no."</p></div>";
+                $count = -1;
+            }
+
+        }
+            $pdf = PDF::loadView('backend.product.productQRCode_pdf', compact('html'))->setPaper('A3', 'Portrait');
+
+            return $pdf->download('ProductQrCode.pdf');
+
+        }
+
+    }
 }

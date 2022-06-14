@@ -44,7 +44,7 @@ class ApiReportController extends Controller
         }
 
         $date = Carbon::now()->timezone($getSetting->timezone)->format('Y-m-d');
-        $userId = $new['user_id'];
+        // $userId = $new['user_id'];
 
         if (!empty($key)) {
             if ($key == $getSetting->key_app) {
@@ -58,13 +58,13 @@ class ApiReportController extends Controller
 
                     // Save the data
                     $save = new ProductReport();
-                    $save->user_id = $userId;
+                    // $save->user_id = $userId;
                     $save->scan_time = $in_time;
                     $save->scan_product_id = $qrId;
 
                     $createNew = $save->save();
 
-                    $product = Product::select('sku.sku_code','sku.sku_category', 'sku.image', 'sku.source_from',
+                    $product = Product::select('sku.sku_code','sku.sku_category', 'sku.image', 'sku.source_from', 'halal_cert_no',
                                                 'sku.manufacturer', 'sku.temperature','batch.batch_no','batch.expired_date', 'product.serial_no')
                                 ->leftjoin('sku', 'sku.id', 'product.sku_id')
                                 ->leftjoin('batch', 'batch.id', 'product.batch_id')
@@ -84,9 +84,11 @@ class ApiReportController extends Controller
                             'manufacturer' => $product->manufacturer,
                             'temperature' => $product->temperature,
                             'batchno' => $product->batch_no,
-                            'expireddate' => $product->expired_date,
+                            'expireddate' => Carbon::parse($product->expired_date)->format('Y-m-d'),
                             'serialno' => $product->serial_no,
-                            'image' => $baseURL
+                            'image' => $baseURL,
+                            'halalcert' => (empty($product->halal_cert_no)? '-':$product->halal_cert_no),
+
                         ];
                         // log::debug($data);
                         return response()->json($data, 200);

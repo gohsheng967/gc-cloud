@@ -6,11 +6,13 @@
 
 @section('content_header')
     <h1>Product Qr</h1>
-@stop
+@stop 
 
 @section('content')
     {{--Show message if any--}}
     @include('layouts.flash-message')
+
+    <a href="{{route('product.exportPage')}}" class ="btn btn-success my-4">Export</a>
 
     <div class="card">
         <div class="card-header">

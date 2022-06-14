@@ -103,17 +103,20 @@ class UsersController extends Controller
         $data->form_action = $this->getRoute() . '.create';
         // Add page type here to indicate that the form.blade.php is in 'add' mode
         $data->page_type = 'add';
-        $data->button_text = 'Add';
+        $data->button_text = 'Save';
+        $user = User::all();
 
         if (Auth::user()->hasRole('administrator')) {
             return view('backend.users.form', [
                 'data' => $data,
+                'user' => $user,
                 'role' => Role::orderBy('id')->pluck('display_name', 'id'),
             ]);
         }
 
         return view('backend.users.form', [
             'data' => $data,
+            'user' => $user,
             'role' => Role::whereNotIn('id', [1, 2])->orderBy('id')->pluck('display_name', 'id'),
         ]);
     }
@@ -206,7 +209,7 @@ class UsersController extends Controller
         $data->form_action = $this->getRoute() . '.update';
         // Add page type here to indicate that the form.blade.php is in 'edit' mode
         $data->page_type = 'edit';
-        $data->button_text = 'Edit';
+        $data->button_text = 'Save';
 
         if (Auth::user()->hasRole('administrator')) {
             return view('backend.users.form', [

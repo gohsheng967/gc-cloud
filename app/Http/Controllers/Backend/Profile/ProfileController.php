@@ -43,7 +43,7 @@ class ProfileController extends Controller
         $userId = Auth::user()->id;
         $data = User::find($userId);
         $data->form_action = $this->getRoute() . '.update';
-        $data->button_text = 'Edit';
+        $data->button_text = 'Save';
 
         return view('backend.profile.form', [
             'data' => $data

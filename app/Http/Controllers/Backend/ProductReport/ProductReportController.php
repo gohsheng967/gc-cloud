@@ -16,12 +16,11 @@ class ProductReportController extends Controller
             'id' => ['title' => 'No.', 'orderable' => false, 'searchable' => false, 'render' => function () {
                 return 'function(data,type,fullData,meta){return meta.settings._iDisplayStart+meta.row+1;}';
             }],
-            'name' => ['name' => 'user.name'],
+            // 'name' => ['name' => 'user.name'],
             'scan_time',
             'product'  =>['product' => 'scan_product_id'],
             'sku'  =>['sku' => 'sku_id'],
             'batch'  =>['batch' => 'batch_id']
-
 
         ];
 
@@ -43,9 +42,9 @@ class ProductReportController extends Controller
             }
             
             return $datatables->of($query)
-                ->addColumn('name', function (ProductReport $data) {
-                    return $data->user->name;
-                })
+                // ->addColumn('name', function (ProductReport $data) {
+                //     return $data->user->name;
+                // })
                 ->addColumn('product', function (ProductReport $data) {
                     return $data->product_scan->serial_no;
                 })
@@ -59,12 +58,12 @@ class ProductReportController extends Controller
                 ->toJson();
         }
 
-        $columnsArrExPr = [0,1,2,3,4,5,6,7];
+        $columnsArrExPr = [0,1,2,3,4,5];
         $html = $datatables->getHtmlBuilder()
             ->columns($columns)
             ->minifiedAjax('', $this->scriptMinifiedJs())
             ->parameters([
-                'order' => [[1,'desc'], [2,'desc']],
+                'order' => [[1,'desc']],
                 'responsive' => true,
                 'autoWidth' => false,
                 'lengthMenu' => [

@@ -17,7 +17,8 @@
             <h3 class="card-title">List</h3>
             <form method="get" action="{{route('batch.add', [$sku])}}" autocomplete="off" >
                 <div class="row">
-                    <button type="submit" name="goAdd"  class="btn btn-xs btn-primary ml-auto">Add Batch</button>
+                    <button type="submit" name="goAdd"  class="btn btn-sm btn-primary ml-auto">Add Batch</button>
+                    <a href="{{ url()->previous() }}" class ="btn btn-sm btn-warning mx-1">Back to Last Page</a>
                 </div> 
              </form>
         </div>

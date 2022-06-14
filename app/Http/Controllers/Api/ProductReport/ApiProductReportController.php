@@ -34,7 +34,7 @@ class ApiProductReportController extends Controller
             return 'Error Qr!';
         }
         $date = Carbon::now()->timezone($getSetting->timezone)->format('Y-m-d');
-        $userId = $new['user_id'];
+        // $userId = $new['user_id'];
         $product = Product::find($qrId)->ladang_ternakan;
 
         if (!empty($key)) {
@@ -47,7 +47,7 @@ class ApiProductReportController extends Controller
                     
                 // Save the data
                 $save = new ProductReport();
-                $save->user_id = $userId;
+                // $save->user_id = $userId;
                 $save->scan_time = $scan_time;
                 $save->scan_product_id = $qrId;
                 $createNew = $save->save();

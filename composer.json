@@ -9,6 +9,7 @@
     "license": "MIT",
     "require": {
         "php": "^7.4",
+        "barryvdh/laravel-dompdf": "^1.0",
         "doctrine/dbal": "^2.0",
         "fideloper/proxy": "^4.0",
         "fx3costa/laravelchartjs": "^2.8",
@@ -18,14 +19,15 @@
         "laravel/passport": "^8.0",
         "laravel/tinker": "^2.0",
         "laravelcollective/html": "^6.1",
+        "lcobucci/jwt": "3.3.3",
         "reliese/laravel": "^0.0.14",
         "santigarcor/laratrust": "5.2.*",
+        "simplesoftwareio/simple-qrcode": "~4",
         "spatie/db-dumper": "^2.15",
         "spatie/laravel-activitylog": "^3.16",
         "yajra/laravel-datatables-buttons": "^4.0",
         "yajra/laravel-datatables-html": "^4.0",
-        "yajra/laravel-datatables-oracle": "~9.0",
-        "lcobucci/jwt": "3.3.3"
+        "yajra/laravel-datatables-oracle": "~9.0"
     },
     "require-dev": {
         "fzaninotto/faker": "^1.9.1",
@@ -71,6 +73,10 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
+        ],
+        "post-install-cmd": [
+            "chmod -R 755 bootstrap\/cache",
+            "php artisan cache:clear"
         ]
     }
 }
