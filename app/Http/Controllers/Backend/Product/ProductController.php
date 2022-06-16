@@ -20,6 +20,7 @@ use Storage;
 use App\Exports\ProductQRCodeExcelExport;
 use Excel;
 use Validator;
+use Illuminate\Support\Str;
 use PDF;
 
 
@@ -133,7 +134,7 @@ class ProductController extends Controller
 
                     $newProduct->refresh();
                     // dd(storage_path());
-                    $path = "QRCode_".$newProduct->serial_no.".png";
+                    $path = "QRCode_".Str::uuid().".png";
 
                     // log::debug(Crypt::encryptString($newProduct->id));
 
@@ -333,34 +334,36 @@ class ProductController extends Controller
                         }
 
                         // Assign value to variables
+                        // Assign value to variables
                         $sku_code = trim($csvData[0]);
                         $batch_no = trim($csvData[1]);
                         $serial_no = trim($csvData[2]);
 
                         $sku_id = Sku::select('id')->where('sku_code', $sku_code)->first();
                         $batch_id = Batch::select('id')->where('batch_no', $batch_no)->where('sku_id', $sku_id->id)->first();
-                        if(empty($sku_id) || empty($batch_id)){
-                            return redirect()->route($this->getRoute())->with('error', 'Import failed! Invalid Data.');
+                        if(!empty($sku_id) && !empty($batch_id)){
+			    $check = Product::where('sku_id',$sku_id->id)->where('batch_id', $batch_id->id)->where('serial_no', $serial_no)->first();
+			    if(empty($check)){
+                            $dataName = array(
+                                'sku_id' => $sku_id->id,
+                                'batch_id' => $batch_id->id,
+                                'serial_no' => $serial_no,
+                            );
+    
+                            $product = Product::create($dataName);
+    
+                            $path = "QRCode_".Str::uuid().".png";
+    
+                            \QrCode::size(400)->format('png')->encoding('UTF-8')->generate($product->id, storage_path()."/app/public/QrCode/". $path);
+    
+                            $product -> qrCode_img = "storage/QrCode/".$path;
+                            $product->save();                        
                         }
-                        // Insert data to QR code
-                        $dataName = array(
-                            'sku_id' => $sku_id->id,
-                            'batch_id' => $batch_id->id,
-                            'serial_no' => $serial_no,
-                        );
-
-                        $product = Product::create($dataName);
-
-                        $path = "QRCode_".$product->serial_no.".png";
-
-                        \QrCode::size(400)->format('png')->encoding('UTF-8')->generate($product->id, storage_path()."\app\public\QrCode\/". $path);
-
-                        $product -> qrCode_img = "storage/QrCode/".$path;
-                        $product->save();
-
+			        }
                     }
 
                     return redirect()->route($this->getRoute())->with('success', 'Imported was success!');
+
                 }
                 return redirect()->route($this->getRoute())->with('error', 'Import failed! You are using the wrong CSV format. Please use the CSV template to import your data.');
             }
