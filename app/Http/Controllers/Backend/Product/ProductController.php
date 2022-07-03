@@ -20,8 +20,8 @@ use Storage;
 use App\Exports\ProductQRCodeExcelExport;
 use Excel;
 use Validator;
-use Illuminate\Support\Str;
 use PDF;
+use Illuminate\Support\Str;
 
 
 
@@ -107,8 +107,6 @@ class ProductController extends Controller
     public function addUpdate(Request $request){
         $new = $request->all();
 
-
-
         if($request->sku_id == ""){
             return  back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
         }
@@ -130,15 +128,19 @@ class ProductController extends Controller
                     $newProduct->sku_id = $request->sku_id;
                     $newProduct->batch_id = $request->batch_id;
                     $newProduct->serial_no = $request->serial_no;
+                    $newProduct->uuid = Str::uuid();
                     $newProduct->save();
 
                     $newProduct->refresh();
                     // dd(storage_path());
-                    $path = "QRCode_".Str::uuid().".png";
+                    $path = "QRCode_".$newProduct->uuid.".png";
 
                     // log::debug(Crypt::encryptString($newProduct->id));
 
-                    \QrCode::size(400)->format('png')->encoding('UTF-8')->generate($newProduct->id, storage_path()."\app\public\QrCode\/". $path);
+			    $newProduct-> encrypt = Crypt::encryptString($newProduct->id);
+                            $newProduct->save();
+
+                    \QrCode::size(500)->format('png')->encoding('UTF-8')->generate($newProduct-> encrypt, storage_path()."/app/public/QrCode/". $path);
 
                     $newProduct -> qrCode_img = "storage/QrCode/".$path;
                     $newProduct->save();
@@ -176,7 +178,6 @@ class ProductController extends Controller
 
 
     }
-
     private function getRoute()
     {
         return 'product';
@@ -188,30 +189,30 @@ class ProductController extends Controller
             [
                 'pageLength'
             ],
-            [
-                'extend' => 'csvHtml5',
-                'exportOptions' => [
-                    'columns' => $columnsArrExPr
-                ]
-            ],
-            [
-                'extend' => 'pdfHtml5',
-                'exportOptions' => [
-                    'columns' => $columnsArrExPr
-                ]
-            ],
-            [
-                'extend' => 'excelHtml5',
-                'exportOptions' => [
-                    'columns' => $columnsArrExPr
-                ]
-            ],
-            [
-                'extend' => 'print',
-                'exportOptions' => [
-                    'columns' => $columnsArrExPr
-                ]
-            ],
+           // [
+            //    'extend' => 'csvHtml5',
+            //    'exportOptions' => [
+            //        'columns' => $columnsArrExPr
+            //    ]
+         //   ],
+          //  [
+          //      'extend' => 'pdfHtml5',
+          //      'exportOptions' => [
+          //          'columns' => $columnsArrExPr
+         //       ]
+         //   ],
+         //   [
+         //       'extend' => 'excelHtml5',
+         //       'exportOptions' => [
+         //           'columns' => $columnsArrExPr
+         //       ]
+         //   ],
+         //   [
+         //       'extend' => 'print',
+         //       'exportOptions' => [
+         //           'columns' => $columnsArrExPr
+         //       ]
+          //  ],
         ];
     }
 
@@ -317,7 +318,6 @@ class ProductController extends Controller
 
                 $header = fgetcsv($fp, 0, ',');
                 $countheader = count($header);
-
                 // Check is csv file is correct format
                 if ($countheader == 3 && in_array('sku_code', $header, true)) {
                     // Loop the row data csv
@@ -334,13 +334,13 @@ class ProductController extends Controller
                         }
 
                         // Assign value to variables
-                        // Assign value to variables
                         $sku_code = trim($csvData[0]);
                         $batch_no = trim($csvData[1]);
                         $serial_no = trim($csvData[2]);
 
                         $sku_id = Sku::select('id')->where('sku_code', $sku_code)->first();
                         $batch_id = Batch::select('id')->where('batch_no', $batch_no)->where('sku_id', $sku_id->id)->first();
+			$uuid = Str::uuid();
                         if(!empty($sku_id) && !empty($batch_id)){
 			    $check = Product::where('sku_id',$sku_id->id)->where('batch_id', $batch_id->id)->where('serial_no', $serial_no)->first();
 			    if(empty($check)){
@@ -348,22 +348,25 @@ class ProductController extends Controller
                                 'sku_id' => $sku_id->id,
                                 'batch_id' => $batch_id->id,
                                 'serial_no' => $serial_no,
+				'uuid' => $uuid
                             );
     
                             $product = Product::create($dataName);
     
-                            $path = "QRCode_".Str::uuid().".png";
-    
-                            \QrCode::size(400)->format('png')->encoding('UTF-8')->generate($product->id, storage_path()."/app/public/QrCode/". $path);
+                            $path = "QRCode_".$product->uuid.".png";
+                            
+			    $product-> encrypt = Crypt::encryptString($product->id);
+                            $product->save();
+
+                            \QrCode::size(500)->format('png')->encoding('UTF-8')->generate($product-> encrypt, storage_path()."/app/public/QrCode/". $path);
     
                             $product -> qrCode_img = "storage/QrCode/".$path;
                             $product->save();                        
                         }
-			        }
+			}
                     }
 
                     return redirect()->route($this->getRoute())->with('success', 'Imported was success!');
-
                 }
                 return redirect()->route($this->getRoute())->with('error', 'Import failed! You are using the wrong CSV format. Please use the CSV template to import your data.');
             }
