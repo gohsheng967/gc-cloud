@@ -68,13 +68,29 @@
                     {{ Form::text('serial_no', $data->serial_no, array('class' => 'form-control', 'required')) }}
                 </div> -->
             </div>
+            <div class="formgroup row" id ='add_section'>
+                <div class="col-sm-2 col-form-label">
+                    <strong class="field-title">Prefix</strong>
+                </div>
+                <div class="col-sm-2 col-content">
+                    {{ Form::text('prefix_1', $data->prefix_1, array('class' => 'form-control mt-1', 'id' =>'prefix_1',  'placeholder' => 'Prefix')) }}
+                </div>
+                <div class="col-sm-2 col-content">
+                    {{ Form::text('running_no', $data->running_no, array('class' => 'form-control mt-1', 'placeholder' => 'Running No')) }}
+                </div> 
+                <div class="col-sm-1 col-content">
+                    {{ Form::number('quantity', $data->quantity, array('class' => 'form-control mt-1')) }}
+                </div>         
+            </div>
+            <div class="mt-3">
+                <h5>Last Three Serial Number<br><span id ='last'></span></h5>
+            </div>
         </div>
 
         <div class="card-footer">
             <div id="form-button">
                 <div class="col-sm-12 text-center top20">
-                    <button type="submit" name="submit" id="btn-admin-member-submit"
-                            class="btn btn-primary">{{ $data->button_text }}</button>
+                    <button type="submit" name="submit" id="btn-admin-member-submit" class="btn btn-primary">{{ $data->button_text }}</button>
                 </div>
             </div>
         </div>
@@ -118,7 +134,7 @@
                             let hasSelected = '{{ request()->get('batchList') }}'
                             
                             if (hasSelected === value.id ||  old_batch_id === value.id) {
-                                $batch_id.append('<option selected value="'+value.id+'">Code: '+value.batch_no + ' @Exp_Date: ' + value.expired_date+'</option>');
+                                $batch_id.append('<option  value="'+value.id+'" selected>Code: '+value.batch_no + ' @Exp_Date: ' + value.expired_date+'</option>');
                             } else {
                                 $batch_id.append('<option value="'+value.id+'">Code: '+value.batch_no + ' @Exp_Date: ' + value.expired_date+'</option>');
                             }
@@ -142,7 +158,9 @@
                 dataType: 'json',
                 success: function (response) {
                     if (response) {
-                        let opt = '';
+                        // let opt = '';
+                        let count = 0;
+                        var last_serial = '';
                         $serial_id.html('<option value="">-- Add New --</option>');
                         $.each(response,function(key,value){
                             let hasSelected = '{{ request()->get('serial_id') }}'
@@ -152,8 +170,17 @@
                             } else {
                                 $serial_id.append('<option  value="'+value.id+'">'+value.serial_no +'</option>');
                             }
+
+                            if(count < 3 ){
+                                last_serial = last_serial + "<div class ='badge badge-success p-2 my-1 mx-1'>"+value.serial_no +"</div>";
+                                count++;
+                            }
                         });
                     }
+                    $('#last').append(last_serial);
+                    const $serial_no = $('#serial_no');
+                    $serial_no.hide();
+
                     $('#spinner').hide();
 
                 }
@@ -168,8 +195,13 @@
 
         if (selSerial_id !== "" ) {
             $serial_no.val(selSerial_text);
+            $('#add_section').hide();
+            $serial_no.show();
+
         }else{
+            $('#add_section').show();
             $serial_no.val('');
+            $serial_no.hide();
         };
     }).trigger('change');
     </script>

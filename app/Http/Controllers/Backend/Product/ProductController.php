@@ -108,47 +108,74 @@ class ProductController extends Controller
         $new = $request->all();
 
         if($request->sku_id == ""){
-            return  back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+            return  back()->withInput()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));  
         }
 
         if($request->batch_id == ""){
-            return  back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
+            return  back()->withInput()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));  
         }
 
 
         if(empty($request->serial_id)){
-            $this->validate($request, [
-                'serial_no' => 'required|unique:product',
-            ],[],[
-            ]);
+
 
             try {
                 if($new){
-                    $newProduct = new Product;
-                    $newProduct->sku_id = $request->sku_id;
-                    $newProduct->batch_id = $request->batch_id;
-                    $newProduct->serial_no = $request->serial_no;
-                    $newProduct->uuid = Str::uuid();
-                    $newProduct->save();
 
-                    $newProduct->refresh();
-                    // dd(storage_path());
-                    $path = "QRCode_".$newProduct->uuid.".png";
+                    $this->validate($request, [
+                        'quantity' => 'required',
+                        'batch_id' => 'required',
+                        'sku_id' => 'required',
+                        'batch_id' => 'required',
+                        'prefix_1' => 'required',
+                        'running_no' => 'required',
+                    ],[],[
+                    ]);
 
-                    // log::debug(Crypt::encryptString($newProduct->id));
+                    $prefix = $request->prefix_1;
+                    $running_no = $request->running_no;
 
-			    $newProduct-> encrypt = Crypt::encryptString($newProduct->id);
-                            $newProduct->save();
+                    if(!preg_match("/^[0-9]+$/", $running_no)){
+                        return  back()->withInput()->with('error','Non integer Character Found');  
+                    }
+                    $length = strlen($running_no);
+                    $convert_to_int = intval($running_no);
+                    $i = 1;
 
-                    \QrCode::size(500)->format('png')->encoding('UTF-8')->generate($newProduct-> encrypt, storage_path()."/app/public/QrCode/". $path);
-
-                    $newProduct -> qrCode_img = "storage/QrCode/".$path;
-                    $newProduct->save();
+                    while($i <= $request->quantity){
 
 
-                    // // Save log
-                    $controller = new SaveActivityLogController();
-                    $controller->saveLog($new, "Created new Product QR");
+                        $newProduct = new Product;
+                        $newProduct->sku_id = $request->sku_id;
+                        $newProduct->batch_id = $request->batch_id;
+                        $newProduct->serial_no =  $prefix.str_pad($convert_to_int, $length, '0', STR_PAD_LEFT);
+                        $newProduct->uuid = Str::uuid();
+                        $newProduct->save();
+    
+                        $newProduct->refresh();
+                        // dd(storage_path());
+                        $path = "QRCode_".$newProduct->uuid.".png";
+    
+                        // log::debug(Crypt::encryptString($newProduct->id));
+    
+                        $newProduct-> encrypt = Crypt::encryptString($newProduct->id);
+                                $newProduct->save();
+    
+                        \QrCode::size(500)->format('png')->encoding('UTF-8')->generate($newProduct-> encrypt, storage_path()."/app/public/QrCode/". $path);
+    
+                        $newProduct -> qrCode_img = "storage/QrCode/".$path;
+                        $newProduct->save();
+    
+    
+                        // // Save log
+                        $controller = new SaveActivityLogController();
+                        $controller->saveLog($new, "Created new Product QR");
+
+                        $convert_to_int =  $convert_to_int +1;
+                        $i+=1;
+                    }
+
+
                     
     
                     // Create is successful, back to list
@@ -161,6 +188,13 @@ class ProductController extends Controller
                 return  back()->with('error', Config::get('const.FAILED_CREATE_MESSAGE'));
             }
         }else{
+            $this->validate($request, [
+                'serial_no' => 'required|unique:product',
+                'batch_id' => 'required',
+                'sku_id' => 'required',
+            ],[],[
+            ]);
+
             $record = Product::where('sku_id', $request->sku_id)
                              ->where('batch_id', $request->batch_id)
                              ->where('id', $request->serial_id)
